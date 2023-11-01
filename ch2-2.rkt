@@ -1,5 +1,4 @@
-#lang racket
-(#%require r5rs/init)
+#lang racket 
 
 (define nil '())
 
@@ -152,8 +151,6 @@
         (else (+ (count-leaves (car x))
                  (count-leaves (cdr x))))))
 
-
-
 ; ex2.24
 
 (list 1 (list 2 (list 3 4)))
@@ -194,5 +191,140 @@
 
 ; ex 2.28
 
-(define (fringe tree))
-  
+(define (fringe tree)
+  (if (null? tree)
+    '()
+    (let ((x (car tree)))
+      (append (if (list? x)
+                (fringe x)
+                (list x))
+              (fringe (cdr tree))))))
+
+(fringe (list (list 1 2) (list 1 2)))
+
+
+; ex 2.29
+
+(define (make-mobile left right)
+  (list left right))
+
+(define (make-branch length structure)
+  (list length structure))
+
+
+; Mapping over trees
+
+(define (scale-tree tree factor)
+  (cond ((null? tree) nil)
+        ((not (pair? tree))
+         (* tree factor))
+        (else
+          (cons (scale-tree (car tree)
+                            factor)
+                (scale-tree (cdr tree)
+                            factor)))))
+
+(scale-tree (list 1
+                  (list 2 (list 3 4) 5)
+                  (list 6 7))
+            10)
+
+(define (scale-tree-map tree factor)
+  (map (lambda (sub-tree)
+         (if (pair? sub-tree)
+           (scale-tree-map sub-tree factor)
+           (* sub-tree factor)))
+       tree))
+
+
+;; ex 2.31
+
+
+(define (tree-map proc tree)
+  (map (lambda (sub-tree)
+         (if (pair? sub-tree)
+           (tree-map proc sub-tree)
+           (proc sub-tree)))
+       tree))
+
+(define (square-tree tree) 
+  (tree-map (lambda (x) (* x x)) tree))
+
+(square-tree 
+  (list 1
+        (list 2 (list 3 4) 5)
+        (list 6 7)))
+
+;; ex 2.32
+(define (subsets s)
+  (if (null? s)
+    (list nil)
+    (let ((rest (subsets (cdr s))))
+      (append rest (map 
+                     (lambda (x) 
+                       (cons (car s) x))
+                     rest)))))
+
+(subsets (list 1 2 3))
+
+;; Sequence Operations
+
+(define (filter predicate sequence)
+  (cond ((null? sequence) nil)
+    ((predicate (car sequence))
+     (cons (car sequence)
+           (filter predicate (cdr sequence))))
+    (else (filter predicate (cdr sequence)))))
+
+(filter odd? (list 1 2 3 4))
+
+(define (accumulate op initial sequence)
+  (if (null? sequence)
+    initial
+    (op (car sequence)
+        (accumulate op
+                    initial
+                    (cdr sequence)))))
+
+(accumulate + 0 (list 1 2 3 4))
+
+
+(define (enumerate-interval low high)
+  (if (> low high)
+    nil
+    (cons low (enumerate-interval (+ low 1) high))))
+
+(enumerate-interval 1 10)
+
+(define (enumerate-tree tree)
+  (cond 
+    ((null? tree) nil)
+    ((not (pair? tree)) (list tree))
+    (else
+      (append
+        (enumerate-tree (car tree))
+        (enumerate-tree (cdr tree))))))
+
+(enumerate-tree (list 1 (list 2 (list 3 4)) 5))
+
+
+;; ex 2.33
+
+(define (map-acc p sequence)
+  (accumulate (lambda (x y) (cons (p x) y)) nil sequence))
+
+(map-acc (lambda (x) (+ 1 x)) (list 1 2 3))
+
+(define (append-acc seq1 seq2)
+  (accumulate cons seq2 seq1))
+
+(append-acc (list 1 2 3) (list 4 5 6))
+
+(define (length-acc seq)
+  (accumulate (lambda (x y) (+ 1 y)) 0 seq))
+
+(length-acc (list 1 2 3))
+
+
+
+
