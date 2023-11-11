@@ -1,4 +1,4 @@
-#lang racket 
+lang racket/base
 
 (define nil '())
 
@@ -52,7 +52,6 @@
 
 (reverse-2 (list 1 2 3 4))
 
-
 ; ex 2.20
 (define (same-parity fst . rst)
   (define parity (remainder fst 2))
@@ -70,11 +69,11 @@
 
 ; Mapping over lists
 
-(define (map proc items)
+(define (my-map proc items)
   (if (null? items)
     nil
     (cons (proc (car items))
-          (map proc (cdr items)))))
+          (my-map proc (cdr items)))))
 
 (map abs (list -10 2.4 11.9))
 
@@ -150,6 +149,8 @@
         ((not (pair? x)) 1)
         (else (+ (count-leaves (car x))
                  (count-leaves (cdr x))))))
+
+(count-leaves (cons (list 1 2) (list 3 4)))
 
 ; ex2.24
 
@@ -325,6 +326,292 @@
 
 (length-acc (list 1 2 3))
 
+;; ex 2.34
+(define (horner-eval x coefficient-sequence)
+  (accumulate 
+    (lambda (this-coeff higher-terms)
+      (+ this-coeff (* x higher-terms)))
+    0 
+    coefficient-sequence)) 
 
+(horner-eval 2 (list 1 3 0 5 0 1))
+
+;; ex 2.35
+
+;; flattens the list recursively to numbers,
+;; then accumulates
+(define (count-leaves-acc t)
+  (accumulate 
+    + 
+    0 
+    (map 
+      (lambda (sub-tree)
+        (cond 
+          ((null? sub-tree) 0)
+          ((not (pair? sub-tree)) 1)
+          (else (count-leaves-acc sub-tree)))) 
+      t))) 
+
+(define ct-tree (cons (list 1 (list 2 5)) (list 3 4)))
+(count-leaves ct-tree)
+(count-leaves-acc ct-tree)
+
+;; ex 2.36
+
+(define (accumulate-n op init seqs)
+  (if (null? (car seqs))
+    nil
+    (cons (accumulate op init (map car seqs))
+          (accumulate-n op init (map cdr seqs)))))
+
+(accumulate-n + 0 '((1 2 3) (4 5 6) (7 8 9) (10 11 12)))
+
+;; ex 2.37
+(define (dot-product v w)
+  (accumulate + 0 (map * v w)))
+
+
+(define (map-n proc seqs)
+  (if (null? (car seqs))
+    nil
+    (cons (accumulate proc (car (car seqs)) (cdr (map car seqs)))
+          (map-n proc (map cdr seqs)))))
+
+(define (map-n-acc-n proc seqs)
+  (accumulate-n))
+
+(map-n * '((1 2 3) (1 2 3)))
+
+(define (my-dot-product v w)
+  (accumulate + 0 (accumulate-n * 1 (list (v w)))))
+
+(accumulate + 0 (accumulate-n * 1 (list (list 1 2 3) (list 4 5 6))))
+
+(map * '(1 2 3) '(4 5 6))
+
+(dot-product '(1 2 3) '(4 5 6))
+
+(define (matrix-*-vector m v)
+  (map (λ (row) (dot-product row v)) m))
+
+(define mat '((0 1 2) (1 2 3) (2 3 4)))
+
+(matrix-*-vector mat '(1 2 3))
+
+(define (transpose m)
+  (accumulate-n cons '() m))
+
+(transpose '((1 2 3) (4 5 6)))
+
+(define (matrix-*-matrix m n)
+  (let ((cols (transpose n)))
+    (map (λ (row) (matrix-*-vector cols row)) m)))
+
+;; ex 2.38
+(define (fold-left op initial sequence)
+  (define (iter result rest)
+    (if (null? rest)
+      result
+      (iter (op result (car rest))
+            (cdr rest))))
+  (iter initial sequence))
+
+(define fold-right accumulate)
+
+(fold-right / 1 (list 1 2 3))
+(fold-left  / 1 (list 1 2 3))
+(fold-right list nil (list 1 2 3))
+(fold-left list nil (list 1 2 3))
+
+;; they must satisfy associativity property
+
+;; ex 2.39
+(define (reverse-fold-right seq)
+  (fold-right (λ (cur acc) (append acc (list cur))) nil seq))
+
+(reverse-fold-right '(1 2 3))
+
+(define (reverse-fold-left seq)
+  (fold-left (λ (cur acc) (cons acc cur)) nil seq))
+
+(reverse-fold-left '(1 2 3))
+
+;; Nested Mappings
+
+(accumulate 
+  append 
+  nil 
+  (map (λ (i)
+         (map (λ (j)
+                (list i j))
+              (enumerate-interval 1 (- i 1))))
+       (enumerate-interval 1 10)))
+
+;; combination of mapping and accumulating with append is common
+;; and called a flatmap
+
+(define (flatmap proc seq)
+  (accumulate append nil (map proc seq)))
+
+(require math/number-theory)
+
+(define (prime-sum? pair)
+  (prime? (+ (car pair) (cadr pair))))
+
+(define (make-pair-sum pair)
+  (list (car pair) (cadr pair) (+ (car pair) (cadr pair))))
+
+(define (prime-sum-pairs n)
+  (map make-pair-sum 
+       (filter prime-sum?
+               (flatmap (λ (i) 
+                          (map (λ (j) 
+                                 (list i j)) 
+                               (enumerate-interval 1 (- i 1))))
+                        (enumerate-interval 1 n)))))
+
+(prime-sum-pairs 5)
+
+(flatmap (λ (x) (list (+ x 1))) (enumerate-interval 1 5))
+
+(define (remove item sequence)
+  (filter (λ (x) (not (= x item)))
+          sequence))
+
+(define (permutations s)
+  (if (null? s)
+    (list nil)
+    (flatmap (λ (x)
+               (map (λ (p)
+                      (cons x p))
+                    (permutations (remove x s))))
+             s))) 
+
+(permutations '(1 2 3))
+
+;; ex 2.40
+  
+(define (range n)
+  (define (range-iter cur acc)
+    (if (= 0 cur)
+      acc 
+      (range-iter (- cur 1) (cons cur acc))))
+  (range-iter n '()))
+
+(flatmap (λ (i)
+           (map (λ (j) 
+                  (list j i)) (range (- i 1)))) (range 9)) 
+
+(flatmap (λ (i) (map (λ (j) (list j i)) (range (- i 1)))) (range 10))
+
+(flatmap (λ (x) x) (map (λ (x) (list x 5)) (range 4)))
+
+(define (unique-pairs n)
+  (define (range n)
+    (define (range-iter cur acc)
+      (if (= 0 cur)
+        acc 
+        (range-iter (- cur 1) (cons cur acc))))
+    (range-iter n '()))
+  (define (make-pair x y) (list x y))
+  (flatmap (λ (i)
+             (map (λ (j) 
+                    (make-pair j i)) (range (- i 1)))) 
+           (range n)))
+
+(unique-pairs 5)  
+
+(define (prime-sum-pairs-improv n)
+  (map make-pair-sum
+   (filter prime-sum? (unique-pairs n))))
+
+(prime-sum-pairs-improv 5)
+
+
+;; ex 2.41
+
+(define (unique-triples-with-sum n s)
+  (define (sum xs)
+    (if (null? xs)
+      0
+      (+ (car xs) (sum (cdr xs)))))
+  (define (sum-equals-s? xs)
+    (= (sum xs) s))
+  (define (range n)
+    (define (range-iter cur acc)
+      (if (= 0 cur)
+        acc 
+        (range-iter (- cur 1) (cons cur acc))))
+    (range-iter n '()))
+  (define (unique-triples n)
+    (flatmap 
+      (λ (i) 
+        (flatmap 
+          (λ (j) 
+            (map 
+              (λ (k) (list k j i)) 
+              (range (- j 1))))
+          (range (- i 1)))) 
+      (range n)))
+  (filter sum-equals-s? (unique-triples n)))
+
+(flatmap 
+  (λ (i) 
+    (flatmap 
+      (λ (j) 
+        (map (λ (k) (list k j i)) (range (- j 1)))) (range (- i 1)))) 
+  (range 10))
+
+(map 
+  (λ (k) (list k)) 
+  (range (- 10 1)))
+  
+(unique-triples-with-sum 5 7)
+
+;; ex 2.42
+
+;; representation could be (row, col)
+
+(define (empty-board) '())
+
+(define (makr-pos r c)
+  (list (r c)))
+
+(define (get-row pos)
+  (car pos))
+
+(define (get-col pos)
+  (cadr pos))
+
+(define (adjoin-position new-row k rest-of-queens)
+  (cons (make-pos new-row k) rest-of-queens))
+
+; make sure new column is not hit by queens in same row, same column 
+; or diagonal
+(define (safe? k positions)
+  (define (row-same? pos1 pos2)
+    (= (get-row pos1) (get-row pos2)))
+  (define (diagonal-same? pos1 pos2)
+    (= (abs (- (get-row pos1) (get-row pos2)) (abs (- (get-col pos1) (get-col pos2))))))
+  (define (pos-safe? pos1 pos2)
+    (if (or (row-same? pos1 pos2) (diagonal-same? pos1 pos2))
+      #f
+      #t))
+  ())
+
+(define (queens board-size)
+  (define (queen-cols k)
+    (if (= k 0)
+      (list empty-board)
+      (filter 
+        (λ (positions) (safe? k positions)) 
+        (flatmap 
+          (λ (rest-of-queens) 
+            (map 
+               (λ (new-row) 
+                 (adjoin-position new-row k rest-of-queens))
+               (enumerate-interval 1 board-size)))
+          (queen-cols (- k 1))))))
+  (queen-cols board-size))
 
 
