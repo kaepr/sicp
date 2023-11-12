@@ -449,7 +449,6 @@ lang racket/base
 
 ;; combination of mapping and accumulating with append is common
 ;; and called a flatmap
-
 (define (flatmap proc seq)
   (accumulate append nil (map proc seq)))
 
@@ -572,10 +571,10 @@ lang racket/base
 
 ;; representation could be (row, col)
 
-(define (empty-board) '())
+(define empty-board '())
 
-(define (makr-pos r c)
-  (list (r c)))
+(define (make-pos r c)
+  (list r c))
 
 (define (get-row pos)
   (car pos))
@@ -583,6 +582,7 @@ lang racket/base
 (define (get-col pos)
   (cadr pos))
 
+;; new queen at the first position 
 (define (adjoin-position new-row k rest-of-queens)
   (cons (make-pos new-row k) rest-of-queens))
 
@@ -592,26 +592,39 @@ lang racket/base
   (define (row-same? pos1 pos2)
     (= (get-row pos1) (get-row pos2)))
   (define (diagonal-same? pos1 pos2)
-    (= (abs (- (get-row pos1) (get-row pos2)) (abs (- (get-col pos1) (get-col pos2))))))
+    (= 
+      (abs (- (get-row pos1) (get-row pos2))) 
+      (abs (- (get-col pos1) (get-col pos2)))))
   (define (pos-safe? pos1 pos2)
-    (if (or (row-same? pos1 pos2) (diagonal-same? pos1 pos2))
-      #f
-      #t))
-  ())
+    (or 
+      (row-same? pos1 pos2) 
+      (diagonal-same? pos1 pos2)))
+  (let ((new-queen-pos (car positions))
+        (rest-queens (cdr positions)))
+    (null? (filter 
+             (λ (rest-queen) (pos-safe? new-queen-pos rest-queen)) 
+             rest-queens))))
 
 (define (queens board-size)
+  ;; generates all possible solutions, filtering out safe? ones
+  ;; in every iteration
   (define (queen-cols k)
     (if (= k 0)
       (list empty-board)
+      ;; get's a list of positions
+      ;; and checks if the latest queen position is safe or not
+      ;; the way list is constructed, latest queen is always first position
       (filter 
         (λ (positions) (safe? k positions)) 
+        ;; generate the list of queen position
         (flatmap 
-          (λ (rest-of-queens) 
-            (map 
+          (λ (rest-of-queens) ;; list of positions of queens
+            (map ;; trys out all row positions 
                (λ (new-row) 
                  (adjoin-position new-row k rest-of-queens))
-               (enumerate-interval 1 board-size)))
-          (queen-cols (- k 1))))))
+               (enumerate-interval 1 board-size))) ; tries out differnt row positions
+          (queen-cols (- k 1)))))) ; changes column number for the new queen
   (queen-cols board-size))
 
+(queens 4)
 
