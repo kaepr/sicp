@@ -1,3 +1,5 @@
+#lang sicp
+
 ;;
 ;; (cons-stream x y)
 ;; (head s)
@@ -53,12 +55,12 @@
 
 ;; ex 3.50
 
-(define (stream-map-args proc . argstreams)
+(define (stream-map-generic proc . argstreams)
   (if (stream-null? (car argstreams))
     the-empty-stream
     (cons-stream
       (apply proc (map stream-car argstreams))
-      (apply stream-map 
+      (apply stream-map-generic 
              (cons proc (map stream-cdr argstreams))))))
 
 
@@ -69,7 +71,192 @@
       low
       (stream-enumerate-interval (+ low 1) high))))
 
-(define (cons-stream a b)
-  (cons a (delay b)))
-
 (stream-enumerate-interval 1 10)
+
+
+;; ex 3.51
+
+(define (show x)
+  (display-line x)
+  x)
+
+(define x
+  (stream-map
+   show
+   (stream-enumerate-interval 0 10)))
+
+(stream-ref x 5)
+(stream-ref x 7)
+(stream-ref x 1)
+
+;; ex 3.52
+
+(define (stream-filter pred stream)
+  (cond ((stream-null? stream)
+         the-empty-stream)
+        ((pred (stream-car stream))
+         (cons-stream
+          (stream-car stream)
+          (stream-filter
+           pred
+           (stream-cdr stream))))
+        (else
+         (stream-filter pred (stream-cdr stream)))))
+
+(display newline)
+                    
+(define sum 0)
+(define (accum x)
+  (set! sum (+ x sum))
+  sum)
+(define seq
+  (stream-map
+   accum
+   (stream-enumerate-interval 1 20)))
+(define y (stream-filter even? seq))
+(define z
+  (stream-filter
+   (lambda (x) (= (remainder x 5) 0)) seq))
+(stream-ref y 7)
+(display-stream z)
+
+(define (integers-starting-from n)
+  (cons-stream
+   n
+   (integers-starting-from (+ n 1))))
+
+(define (divisible? x y) (= (remainder x y) 0))
+(define (sieve stream)
+  (cons-stream
+   (stream-car stream)
+   (sieve (stream-filter
+           (lambda (x)
+             (not (divisible? x (stream-car stream))))
+           (stream-cdr stream)))))
+
+(define primes
+  (sieve (integers-starting-from 2)))
+
+(stream-ref primes 50)
+
+(define ones (cons-stream 1 ones))
+
+(define (add-streams s1 s2)
+  (stream-map-generic + s1 s2))
+
+(define integers
+  (cons-stream 1 (add-streams ones integers)))
+
+
+
+;; ex 3.53
+
+(define s (cons-stream 1 (add-streams s s)))
+
+(stream-ref s 1)
+(stream-ref s 2)
+(stream-ref s 3)
+(stream-ref s 4)
+
+
+;; 1 + 1, 2 + 2, 4 + 4 ...
+
+
+;; ex 3.54
+
+(define (mul-streams s1 s2)
+  (stream-map-generic * s1 s2))
+
+(define factorials
+  (cons-stream 1 (mul-streams integers factorials)))
+
+(stream-ref factorials 6)
+
+;; ex 3.55
+
+(define (partial-sums s)
+  (cons-stream
+   (stream-car s)
+   (add-streams (stream-cdr s) (partial-sums s))))
+
+
+(partial-sums integers)
+
+(define (interleave s1 s2)
+  (if (stream-null? s1)
+      s2
+      (cons-stream
+       (stream-car s1)
+       (interleave s2 (stream-cdr s1)))))
+
+(define (pairs s t)
+  (cons-stream
+   (list (stream-car s) (stream-car t))
+   (interleave
+    (stream-map (lambda (x) (list (stream-car s) x))
+                (stream-cdr t))
+    (pairs (stream-cdr x) (stream-cdr t)))))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
